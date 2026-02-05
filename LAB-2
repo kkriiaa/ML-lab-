@@ -1,0 +1,138 @@
+
+
+
+
+#dataset from sider
+
+import pandas as pd
+
+df = pd.read_csv("meddra_freq.tsv", sep="\t")
+df.to_csv("output.csv", index=False)
+df.columns = [
+    "drug_cid",
+    "condition_cid",
+    "meddra_concept_id",
+    "drop_col",
+    "frequency_percent",
+    "frequency_decimal",
+    "frequency_normalized",
+    "meddra_level",
+    "meddra_term_id",
+    "adverse_event"
+]
+df = df.drop(columns=[
+    "drop_col",
+    "condition_cid",
+    "meddra_concept_id"
+])
+df = df.rename(columns={
+    "drug_cid": "drug_compound_id",
+    "frequency_percent": "adverse_event_frequency_pct",
+    "frequency_decimal": "adverse_event_frequency",
+    "frequency_normalized": "normalized_event_frequency",
+    "meddra_level": "meddra_hierarchy_level",
+    "meddra_term_id": "meddra_term_code",
+    "adverse_event": "adverse_event_term"
+})
+
+
+df.head(10)
+
+print(df.isna().sum())
+
+df["adverse_event_frequency_pct"] = (
+    df["adverse_event_frequency_pct"]
+    .astype(str)
+    .str.replace("%", "", regex=False)
+)
+
+df["adverse_event_frequency_pct"] = pd.to_numeric(
+    df["adverse_event_frequency_pct"],
+    errors="coerce"
+)
+
+df["adverse_event_frequency_pct"] = df["adverse_event_frequency_pct"].fillna(
+    df["adverse_event_frequency_pct"].median()
+)
+df["meddra_hierarchy_level"] = df["meddra_hierarchy_level"].fillna("Unknown")
+df["meddra_term_code"] = df["meddra_term_code"].fillna("Unknown")
+
+print(df.isna().sum())
+
+# Map text categories to roughly numeric percents
+df["adverse_event_frequency_pct"] = (
+    df["adverse_event_frequency_pct"]
+    .astype(str)
+    .str.lower()
+    .str.strip()
+)
+
+freq_map = {
+    "very common": 10,
+    "common": 5,
+    "uncommon": 1,
+    "rare": 0.1,
+    "very rare": 0.01
+}
+
+df["adverse_event_frequency_pct"] = df["adverse_event_frequency_pct"].replace(freq_map)
+
+# Remove % and convert to numeric
+df["adverse_event_frequency_pct"] = (
+    df["adverse_event_frequency_pct"]
+    .str.replace("%", "", regex=False)
+)
+
+df["adverse_event_frequency_pct"] = pd.to_numeric(
+    df["adverse_event_frequency_pct"], errors="coerce"
+)
+
+df = df.drop_duplicates()
+
+print("Missing after fill:\n", df.isna().sum())
+
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import train_test_split
+scaler = StandardScaler()
+df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+
+df_encoded = pd.get_dummies(
+    df,
+    columns=["meddra_hierarchy_level"],
+    prefix="meddra_level"
+)
+
+X = df_encoded.drop("adverse_event_term", axis=1)
+y = df_encoded["adverse_event_term"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+from sklearn.model_selection import train_test_split
+from IPython.display import display
+
+# Split features and target
+X = df_encoded.drop("adverse_event_term", axis=1)
+y = df_encoded["adverse_event_term"]
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Show shapes
+print("X_train shape:", X_train.shape)
+print("X_test shape:", X_test.shape)
+print("y_train shape:", y_train.shape)
+print("y_test shape:", y_test.shape)
+
+# Show sample outputs
+print("\nX_train sample:")
+display(X_train.head())
+
+print("\ny_train sample:")
+display(y_train.head())
+
+df_encoded.to_csv("meddra_preprocessed.csv", index=False)
+print("Preprocessing complete. Saved to meddra_preprocessed.csv")
