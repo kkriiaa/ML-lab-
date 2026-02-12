@@ -1,9 +1,3 @@
-
-
-
-
-#dataset from sider
-
 import pandas as pd
 
 df = pd.read_csv("meddra_freq.tsv", sep="\t")
@@ -94,7 +88,10 @@ print("Missing after fill:\n", df.isna().sum())
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 scaler = StandardScaler()
+numeric_cols = df.select_dtypes(include=['number']).columns
+
 df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+
 
 df_encoded = pd.get_dummies(
     df,
