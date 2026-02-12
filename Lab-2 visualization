@@ -1,0 +1,76 @@
+#Histogram of adverse_event_frequency_pct
+import matplotlib.pyplot as plt
+import seaborn as sns 
+plt.figure(figsize=(8,5))
+
+sns.histplot(
+    df['adverse_event_frequency_pct'],
+    bins=50,
+    kde=True
+)
+
+plt.xlim(-1, 1.5)  #range 
+plt.title("Zoomed Distribution of Adverse Event Frequency (%)")
+plt.xlabel("Adverse Event Frequency (%)")
+plt.ylabel("Count")
+
+plt.show()
+
+#correlation
+numeric_cols = df.select_dtypes(include=['number'])
+
+plt.figure(figsize=(6,5))
+sns.heatmap(numeric_cols.corr(),
+            annot=True,
+            cmap='coolwarm',
+            fmt=".2f")
+
+plt.title("Correlation Between Frequency Measures")
+plt.show()
+
+#Top 20 High-Risk Compounds
+compound_risk = df.groupby('drug_compound_id')['normalized_event_frequency'].mean()
+top_20 = compound_risk.sort_values(ascending=False).head(20)
+plt.figure(figsize=(10,6))
+sns.barplot(x=top_20.values,
+            y=top_20.index)
+
+plt.title("Top 20 Highest Risk Drug Compounds")
+plt.xlabel("Mean Normalized Event Frequency")
+plt.ylabel("Drug Compound ID")
+plt.show()
+
+#heatmap
+top_compounds = df['drug_compound_id'].value_counts().head(30).index
+
+subset = df[df['drug_compound_id'].isin(top_compounds)]
+
+pivot_table = subset.pivot_table(
+    index='drug_compound_id',
+    columns='meddra_term_code',
+    values='normalized_event_frequency',
+    aggfunc='mean'
+)
+
+plt.figure(figsize=(12,8))
+sns.heatmap(pivot_table, cmap='viridis')
+plt.title("Heatmap: Compound vs MedDRA Term")
+plt.show()
+
+#outlier detection 
+from scipy.stats import zscore
+
+df['z_score'] = zscore(df['normalized_event_frequency'])
+
+plt.figure(figsize=(8,5))
+sns.scatterplot(
+    x=range(len(df)),
+    y='z_score',
+    data=df
+)
+
+plt.axhline(3, color='r')
+plt.axhline(-3, color='r')
+
+plt.title("Z-score Outlier Detection")
+plt.show()
